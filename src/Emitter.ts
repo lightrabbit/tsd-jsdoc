@@ -196,16 +196,7 @@ export default class Emitter {
                 const o = (doclet.kind === 'typedef' ? (obj as any).type : obj) as dom.MethodDeclaration;
 
                 // resolve parameter types
-                for (let i = 0; i < o.parameters.length; ++i) {
-                    (o.parameters[i] as any)._parent = o;
-                    if (!d.params[i].type) {
-                        warnResolve(d, EResolveFailure.FunctionParam, `No type specified for param: ${d.params[i].name}. Falling back to any.`);
-                        o.parameters[i].type = dom.type.any;
-                    }
-                    else {
-                        o.parameters[i].type = this._resolveType(d.params[i], o.parameters[i]);
-                    }
-                }
+                this._resolveParameterTypes(o, d);
 
                 // resolve return type
                 if (!d.returns) {
@@ -261,16 +252,7 @@ export default class Emitter {
                 }
 
                 if (ctorObj) {
-                    for (let i = 0; i < doclet.params.length; ++i) {
-                        (ctorObj.parameters[i] as any)._parent = ctorObj;
-                        if (!doclet.params[i].type) {
-                            warnResolve(doclet, EResolveFailure.FunctionParam, `No type specified for constructor param: ${doclet.params[i].name}. Falling back to any.`);
-                            ctorObj.parameters[i].type = dom.type.any;
-                        }
-                        else {
-                            ctorObj.parameters[i].type = this._resolveType(doclet.params[i], ctorObj.parameters[i]);
-                        }
-                    }
+                    this._resolveParameterTypes(ctorObj, doclet);
                 }
 
                 // resolve augments
@@ -363,6 +345,43 @@ export default class Emitter {
                 }
             }
         }
+    }
+
+    private _resolveParameterTypes(ctorObj: dom.ConstructorDeclaration | dom.MethodDeclaration, doclet: IClassDoclet | IFunctionDoclet) {
+        const paramsMap: { [name: string]: dom.ObjectType } = {};
+        if (!doclet.params) {
+            console.log(doclet.longname);
+            return;
+        }
+        for (let i = 0; i < doclet.params.length; ++i) {
+
+            (ctorObj.parameters[i] as any)._parent = ctorObj;
+            if (!doclet.params[i].type) {
+                warnResolve(
+                    doclet,
+                    EResolveFailure.FunctionParam,
+                    `No type specified for constructor param: ${doclet.params[i].name}. Falling back to any.`);
+                ctorObj.parameters[i].type = dom.type.any;
+            }
+            else {
+                ctorObj.parameters[i].type = this._resolveType(doclet.params[i], ctorObj.parameters[i]);
+                if (doclet.params[i].name.indexOf('.') !== - 1) {
+                    const [paramName, paramObjectProperty] = doclet.params[i].name.split('.');
+                    let objectType = paramsMap[paramName];
+                    if (!objectType) {
+                        paramsMap[paramName] = objectType = dom.create.objectType([]);
+                    }
+                    objectType.members.push(
+                        dom.create.property(
+                            paramObjectProperty,
+                            ctorObj.parameters[i].type,
+                        ),
+                    );
+                }
+            }
+        }
+        ctorObj.parameters = ctorObj.parameters.filter((v) => v.name.indexOf('.') === -1);
+        ctorObj.parameters.filter((v) => paramsMap[v.name]).forEach((v) => v.type = paramsMap[v.name]);
     }
 
     private _resolveModules(classes: any[]) {
