@@ -7,10 +7,12 @@
         "declaration": false,
         "noImplicitAny": true,
         "removeComments": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "outDir": "."
     },
     "include": [
         "typings/**/*.ts",
         "src/**/*.ts"
-    ]
+    ],
+    "exclude": []
 }
