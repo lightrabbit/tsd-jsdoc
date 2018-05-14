@@ -520,17 +520,7 @@ export default class Emitter {
         const obj = this.objects[doclet.longname] = dom.create.class(doclet.name);
 
         if (doclet.params) {
-            const ctorParams: dom.Parameter[] = [];
-
-            for (let i = 0; i < doclet.params.length; ++i) {
-                const param = doclet.params[i];
-                const p = dom.create.parameter(param.name, null);
-
-                handleFlags(param, p);
-
-                ctorParams.push(p);
-            }
-
+            const ctorParams: dom.Parameter[] = getFunctionParams(doclet);
             const ctor = dom.create.constructor(ctorParams);
             handleFlags(doclet, ctor);
             obj.members.push(ctor);
@@ -644,7 +634,7 @@ function handleCustomTags(doclet: TDoclet, obj: dom.DeclarationBase) {
     }
 }
 
-function getFunctionParams(doclet: IFunctionDoclet|ITypedefDoclet) {
+function getFunctionParams(doclet: IFunctionDoclet|ITypedefDoclet|IClassDoclet) {
     const fnParams: dom.Parameter[] = [];
 
     if (doclet.params) {
